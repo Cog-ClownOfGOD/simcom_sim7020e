@@ -4,12 +4,12 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-#define DT_DRV_COMPAT quectel_bg9x
+#define DT_DRV_COMPAT simcom_sim7020e
 
 #include <logging/log.h>
-LOG_MODULE_REGISTER(modem_quectel_bg9x, CONFIG_MODEM_LOG_LEVEL);
+LOG_MODULE_REGISTER(modem_simcom_sim7020e, CONFIG_MODEM_LOG_LEVEL);
 
-#include "quectel-bg9x.h"
+#include "simcom-sim7020e.h"
 
 static struct k_thread	       modem_rx_thread;
 static struct k_work_q	       modem_workq;
@@ -17,8 +17,8 @@ static struct modem_data       mdata;
 static struct modem_context    mctx;
 static const struct socket_op_vtable offload_socket_fd_op_vtable;
 
-static K_KERNEL_STACK_DEFINE(modem_rx_stack, CONFIG_MODEM_QUECTEL_BG9X_RX_STACK_SIZE);
-static K_KERNEL_STACK_DEFINE(modem_workq_stack, CONFIG_MODEM_QUECTEL_BG9X_RX_WORKQ_STACK_SIZE);
+static K_KERNEL_STACK_DEFINE(modem_rx_stack, CONFIG_MODEM_SIMCOM_SIM7020E_RX_STACK_SIZE);
+static K_KERNEL_STACK_DEFINE(modem_workq_stack, CONFIG_MODEM_SIMCOM_SIM7020E_RX_WORKQ_STACK_SIZE);
 NET_BUF_POOL_DEFINE(mdm_recv_pool, MDM_RECV_MAX_BUF, MDM_RECV_BUF_SIZE, 0, NULL);
 
 static inline int digits(int n)
@@ -873,13 +873,13 @@ static void modem_rssi_query_work(struct k_work *work)
 static void pin_init(void)
 {
 	LOG_INF("Setting Modem Pins");
-
+/*
 #if DT_INST_NODE_HAS_PROP(0, mdm_wdisable_gpios)
 	LOG_INF("Deactivate W Disable");
 	modem_pin_write(&mctx, MDM_WDISABLE, 0);
 	k_sleep(K_MSEC(250));
 #endif
-
+*/
 	/* NOTE: Per the BG95 document, the Reset pin is internally connected to the
 	 * Power key pin.
 	 */
@@ -1199,9 +1199,9 @@ error:
 /* Register the device with the Networking stack. */
 NET_DEVICE_DT_INST_OFFLOAD_DEFINE(0, modem_init, NULL,
 				  &mdata, NULL,
-				  CONFIG_MODEM_QUECTEL_BG9X_INIT_PRIORITY,
+				  CONFIG_MODEM_SIMCOM_SIM7020E_INIT_PRIORITY,
 				  &api_funcs, MDM_MAX_DATA_LENGTH);
 
 /* Register NET sockets. */
-NET_SOCKET_REGISTER(quectel_bg9x, CONFIG_NET_SOCKETS_OFFLOAD_PRIORITY, AF_UNSPEC,
+NET_SOCKET_REGISTER(simcom_sim7020e, CONFIG_NET_SOCKETS_OFFLOAD_PRIORITY, AF_UNSPEC,
 		    offload_is_supported, offload_socket);
