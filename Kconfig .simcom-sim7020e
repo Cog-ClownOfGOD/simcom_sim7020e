@@ -1,36 +1,36 @@
-# Quectel BG9x driver options
+# Simcom sim7020e driver options
 
 # Copyright (c) 2020 Analog Life LLC
 # SPDX-License-Identifier: Apache-2.0
 
-config MODEM_QUECTEL_BG9X
-	bool "Quectel modem driver"
+config MODEM_SIMCOM_SIM7020E
+	bool "Simcom modem driver"
 	select MODEM_CONTEXT
 	select MODEM_CMD_HANDLER
 	select MODEM_IFACE_UART
 	select MODEM_SOCKET
 	select NET_SOCKETS_OFFLOAD
 	help
-	  Choose this setting to enable quectel BG9x LTE-CatM1/NB-IoT modem
+	  Choose this setting to enable simcom sim7020e LTE-CatM1/NB-IoT modem
 	  driver.
 
-if MODEM_QUECTEL_BG9X
+if MODEM_SIMCOM_SIM7020E
 
-config MODEM_QUECTEL_BG9X_RX_STACK_SIZE
-	int "Stack size for the quectel BG9X modem driver RX thread"
+config MODEM_SIMCOM_SIM7020E_RX_STACK_SIZE
+	int "Stack size for the simcom sim7020e modem driver RX thread"
 	default 1028
 	help
-	  This stack is used by the quectel BG9X RX thread.
+	  This stack is used by the simcom sim7020e RX thread.
 
-config MODEM_QUECTEL_BG9X_RX_WORKQ_STACK_SIZE
-	int "Stack size for the quectel BG9X modem driver work queue"
+config MODEM_SIMCOM_SIM7020E_RX_WORKQ_STACK_SIZE
+	int "Stack size for the simcom sim7020e modem driver work queue"
 	default 2048
 	help
 	  This stack is used by the work queue to pass off net_pkt data
 	  to the rest of the network stack, letting the rx thread continue
 	  processing data.
 
-config MODEM_QUECTEL_BG9X_APN
+config MODEM_SIMCOM_SIM7020E_APN
 	string "APN for establishing network connection"
 	default "internet"
 	help
@@ -38,7 +38,7 @@ config MODEM_QUECTEL_BG9X_APN
 	  context.  This value is specific to the network provider and may
 	  need to be changed.
 
-config MODEM_QUECTEL_BG9X_USERNAME
+config MODEM_SIMCOM_SIM7020E_USERNAME
 	string "Username for establishing network connection"
 	default ""
 	help
@@ -46,7 +46,7 @@ config MODEM_QUECTEL_BG9X_USERNAME
 	  context.  This value is specific to the network provider and may
 	  need to be changed.
 
-config MODEM_QUECTEL_BG9X_PASSWORD
+config MODEM_SIMCOM_SIM7020E_PASSWORD
 	string "Password for establishing network connection"
 	default ""
 	help
@@ -54,11 +54,11 @@ config MODEM_QUECTEL_BG9X_PASSWORD
 	  context.  This value is specific to the network provider and may
 	  need to be changed.
 
-config MODEM_QUECTEL_BG9X_INIT_PRIORITY
-	int "quectel BG9X driver init priority"
+config MODEM_SIMCOM_SIM7020E_INIT_PRIORITY
+	int "simcom sim7020e driver init priority"
 	default 80
 	help
-	  quectel BG9X device driver initialization priority.
+	  simcom sim7020e device driver initialization priority.
 	  Do not mess with it unless you know what you are doing.
 	  Note that the priority needs to be lower than the net stack
 	  so that it can start before the networking sub-system.
