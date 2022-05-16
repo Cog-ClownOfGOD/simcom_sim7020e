@@ -4,8 +4,8 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-#ifndef QUECTEL_BG9X_H
-#define QUECTEL_BG9X_H
+#ifndef SIMCOM_SIM7020E_H
+#define SIMCOM_SIM7020E_H
 
 #include <kernel.h>
 #include <ctype.h>
@@ -52,9 +52,9 @@
 #define MDM_APN_LENGTH			  32
 #define RSSI_TIMEOUT_SECS		  30
 
-#define MDM_APN				  CONFIG_MODEM_QUECTEL_BG9X_APN
-#define MDM_USERNAME			  CONFIG_MODEM_QUECTEL_BG9X_USERNAME
-#define MDM_PASSWORD			  CONFIG_MODEM_QUECTEL_BG9X_PASSWORD
+#define MDM_APN				  CONFIG_MODEM_SIMCOM_SIM7020E_APN
+#define MDM_USERNAME			  CONFIG_MODEM_SIMCOM_SIM7020E_USERNAME
+#define MDM_PASSWORD			  CONFIG_MODEM_SIMCOM_SIM7020E_PASSWORD
 
 /* Modem ATOI routine. */
 #define ATOI(s_, value_, desc_)	  modem_atoi(s_, value_, desc_, __func__)
@@ -66,9 +66,11 @@ enum mdm_control_pins {
 #if DT_INST_NODE_HAS_PROP(0, mdm_dtr_gpios)
 	MDM_DTR,
 #endif
+/*
 #if DT_INST_NODE_HAS_PROP(0, mdm_wdisable_gpios)
 	MDM_WDISABLE,
 #endif
+*/
 };
 
 /* driver data */
@@ -140,12 +142,14 @@ static struct modem_pin modem_pins[] = {
 		  DT_INST_GPIO_PIN(0, mdm_dtr_gpios),
 		  DT_INST_GPIO_FLAGS(0, mdm_dtr_gpios) | GPIO_OUTPUT_LOW),
 #endif
+/*
 #if DT_INST_NODE_HAS_PROP(0, mdm_wdisable_gpios)
-	/* MDM_WDISABLE */
+	// MDM_WDISABLE 
 	MODEM_PIN(DT_INST_GPIO_LABEL(0, mdm_wdisable_gpios),
 		  DT_INST_GPIO_PIN(0, mdm_wdisable_gpios),
 		  DT_INST_GPIO_FLAGS(0, mdm_wdisable_gpios) | GPIO_OUTPUT_LOW),
 #endif
+*/
 };
 
 #endif /* QUECTEL_BG9X_H */
