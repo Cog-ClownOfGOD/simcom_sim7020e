@@ -9,91 +9,112 @@
 
 #include <kernel.h>
 #include <ctype.h>
+#include <inttypes.h>
 #include <errno.h>
 #include <zephyr.h>
 #include <drivers/gpio.h>
+#include <drivers/modem/simcom-sim7020e.h>
 #include <device.h>
+#include <devicetree.h>
 #include <init.h>
+#include <string.h>
 
 #include <net/net_if.h>
 #include <net/net_offload.h>
 #include <net/socket_offload.h>
 
 #include "modem_context.h"
-#include "modem_socket.h"
 #include "modem_cmd_handler.h"
 #include "modem_iface_uart.h"
+#include "modem_socket.h"
 
-#define MDM_UART_DEV			  DEVICE_DT_GET(DT_INST_BUS(0))
-#define MDM_CMD_TIMEOUT			  K_SECONDS(10)
-#define MDM_CMD_CONN_TIMEOUT		  K_SECONDS(120)
-#define MDM_REGISTRATION_TIMEOUT	  K_SECONDS(180)
-#define MDM_SENDMSG_SLEEP		  K_MSEC(1)
-#define MDM_MAX_DATA_LENGTH		  1024
-#define MDM_RECV_MAX_BUF		  30
-#define MDM_RECV_BUF_SIZE		  1024
-#define MDM_MAX_SOCKETS			  5
-#define MDM_BASE_SOCKET_NUM		  0
-#define MDM_NETWORK_RETRY_COUNT		  10
-#define MDM_INIT_RETRY_COUNT		  10
-#define MDM_PDP_ACT_RETRY_COUNT		  3
-#define MDM_WAIT_FOR_RSSI_COUNT		  10
-#define MDM_WAIT_FOR_RSSI_DELAY		  K_SECONDS(2)
-#define BUF_ALLOC_TIMEOUT		  K_SECONDS(1)
-#define MDM_MAX_BOOT_TIME		  K_SECONDS(50)
+#define MDM_UART_DEV DEVICE_DT_GET(DT_INST_BUS(0))
+#define MDM_MAX_DATA_LENGTH 1024
+#define MDM_RECV_BUF_SIZE 1024
+#define MDM_MAX_SOCKETS 5
+#define MDM_BASE_SOCKET_NUM 0
+#define MDM_RECV_MAX_BUF 30
+#define BUF_ALLOC_TIMEOUT K_SECONDS(1)
+#define MDM_CMD_TIMEOUT K_SECONDS(10)
+#define MDM_REGISTRATION_TIMEOUT K_SECONDS(180)
+#define MDM_CONNECT_TIMEOUT K_SECONDS(90)
+#define MDM_PDP_TIMEOUT K_SECONDS(120)
+#define MDM_DNS_TIMEOUT K_SECONDS(210)
+#define MDM_WAIT_FOR_RSSI_DELAY K_SECONDS(2)
+#define MDM_WAIT_FOR_RSSI_COUNT 30
+#define MDM_MAX_AUTOBAUD 5
+#define MDM_MAX_CEREG_WAITS 40
+#define MDM_MAX_CGATT_WAITS 40
+#define MDM_BOOT_TRIES 4
+#define MDM_GNSS_PARSER_MAX_LEN 128
+#define MDM_APN CONFIG_MODEM_SIMCOM_SIM7080_APN
+#define MDM_LTE_BANDS CONFIG_MODEM_SIMCOM_SIM7080_LTE_BANDS
+#define RSSI_TIMEOUT_SECS 30
 
-/* Default lengths of certain things. */
-#define MDM_MANUFACTURER_LENGTH		  10
-#define MDM_MODEL_LENGTH		  16
-#define MDM_REVISION_LENGTH		  64
-#define MDM_IMEI_LENGTH			  16
-#define MDM_IMSI_LENGTH			  16
-#define MDM_ICCID_LENGTH		  32
-#define MDM_APN_LENGTH			  32
-#define RSSI_TIMEOUT_SECS		  30
-
-#define MDM_APN				  CONFIG_MODEM_SIMCOM_SIM7020E_APN
-#define MDM_USERNAME			  CONFIG_MODEM_SIMCOM_SIM7020E_USERNAME
-#define MDM_PASSWORD			  CONFIG_MODEM_SIMCOM_SIM7020E_PASSWORD
-
-/* Modem ATOI routine. */
-#define ATOI(s_, value_, desc_)	  modem_atoi(s_, value_, desc_, __func__)
-
-/* pin settings */
-enum mdm_control_pins {
-	MDM_POWER = 0,
-	MDM_RESET,
-#if DT_INST_NODE_HAS_PROP(0, mdm_dtr_gpios)
-	MDM_DTR,
-#endif
 /*
-#if DT_INST_NODE_HAS_PROP(0, mdm_wdisable_gpios)
-	MDM_WDISABLE,
-#endif
-*/
+ * Default length of modem data.
+ */
+#define MDM_MANUFACTURER_LENGTH 12
+#define MDM_MODEL_LENGTH 16
+#define MDM_REVISION_LENGTH 64
+#define MDM_IMEI_LENGTH 16
+#define MDM_IMSI_LENGTH 16
+#define MDM_ICCID_LENGTH 32
+
+enum sim7020e_state {
+	SIM7020e_STATE_INIT = 0,
+	SIM7020e_STATE_NETWORKING,
+	SIM7020e_STATE_GNSS,
+	SIM7020e_STATE_OFF,
 };
 
-/* driver data */
-struct modem_data {
-	struct net_if *net_iface;
-	uint8_t mac_addr[6];
+/* Possible states of the ftp connection. */
+enum sim7020e_ftp_connection_state {
+	/* Not connected yet. */
+	SIM7020e_FTP_CONNECTION_STATE_INITIAL = 0,
+	/* Connected and still data available. */
+	SIM7020e_FTP_CONNECTION_STATE_CONNECTED,
+	/* All data transferred. */
+	SIM7020e_FTP_CONNECTION_STATE_FINISHED,
+	/* Something went wrong. */
+	SIM7020e_FTP_CONNECTION_STATE_ERROR,
+};
 
-	/* modem interface */
+/*
+ * Driver data.
+ */
+struct sim7020e_data {
+	/*
+	 * Network interface of the sim module.
+	 */
+	struct net_if *netif;
+	uint8_t mac_addr[6];
+	/*
+	 * Uart interface of the modem.
+	 */
 	struct modem_iface_uart_data iface_data;
 	uint8_t iface_rb_buf[MDM_MAX_DATA_LENGTH];
-
-	/* modem cmds */
+	/*
+	 * Modem command handler.
+	 */
 	struct modem_cmd_handler_data cmd_handler_data;
 	uint8_t cmd_match_buf[MDM_RECV_BUF_SIZE + 1];
-
-	/* socket data */
+	/*
+	 * Modem socket data.
+	 */
 	struct modem_socket_config socket_config;
 	struct modem_socket sockets[MDM_MAX_SOCKETS];
-
-	/* RSSI work */
+	/*
+	 * Current state of the modem.
+	 */
+	enum sim7020e_state state;
+	/*
+	 * RSSI work
+	 */
 	struct k_work_delayable rssi_query_work;
-
-	/* modem data */
+	/*
+	 * Information over the modem.
+	 */
 	char mdm_manufacturer[MDM_MANUFACTURER_LENGTH];
 	char mdm_model[MDM_MODEL_LENGTH];
 	char mdm_revision[MDM_REVISION_LENGTH];
@@ -103,53 +124,64 @@ struct modem_data {
 	char mdm_iccid[MDM_ICCID_LENGTH];
 #endif /* #if defined(CONFIG_MODEM_SIM_NUMBERS) */
 	int mdm_rssi;
-
-	/* bytes written to socket in last transaction */
-	int sock_written;
-
-	/* Socket from which we are currently reading data. */
-	int sock_fd;
-
-	/* Semaphore(s) */
+	/*
+	 * Current operating socket and statistics.
+	 */
+	int current_sock_fd;
+	int current_sock_written;
+	/*
+	 * Network registration of the modem.
+	 */
+	uint8_t mdm_registration;
+	/*
+	 * Whether gprs is attached or detached.
+	 */
+	uint8_t mdm_cgatt;
+	/*
+	 * If the sim card is ready or not.
+	 */
+	bool cpin_ready;
+	/*
+	 * Flag if the PDP context is active.
+	 */
+	bool pdp_active;
+	/* SMS buffer structure provided by read. */
+	struct sim7020e_sms_buffer *sms_buffer;
+	/* Position in the sms buffer. */
+	uint8_t sms_buffer_pos;
+	/* Ftp related variables. */
+	struct {
+		/* User buffer for ftp data. */
+		char *read_buffer;
+		/* Length of the read buffer/number of bytes read. */
+		size_t nread;
+		/* State of the ftp connection. */
+		enum sim7020e_ftp_connection_state state;
+	} ftp;
+	/*
+	 * Semaphore(s).
+	 */
 	struct k_sem sem_response;
 	struct k_sem sem_tx_ready;
-	struct k_sem sem_sock_conn;
+	struct k_sem sem_dns;
+	struct k_sem sem_ftp;
 };
 
-/* Socket read callback data */
-struct socket_read_data {
-	char		 *recv_buf;
-	size_t		 recv_buf_len;
-	struct sockaddr	 *recv_addr;
-	uint16_t	 recv_read_len;
-};
-
-/* Modem pins - Power, Reset & others. */
-static struct modem_pin modem_pins[] = {
-	/* MDM_POWER */
-	MODEM_PIN(DT_INST_GPIO_LABEL(0, mdm_power_gpios),
-		  DT_INST_GPIO_PIN(0, mdm_power_gpios),
-		  DT_INST_GPIO_FLAGS(0, mdm_power_gpios) | GPIO_OUTPUT_LOW),
-
-	/* MDM_RESET */
-	MODEM_PIN(DT_INST_GPIO_LABEL(0, mdm_reset_gpios),
-		  DT_INST_GPIO_PIN(0, mdm_reset_gpios),
-		  DT_INST_GPIO_FLAGS(0, mdm_reset_gpios) | GPIO_OUTPUT_LOW),
-
-#if DT_INST_NODE_HAS_PROP(0, mdm_dtr_gpios)
-	/* MDM_DTR */
-	MODEM_PIN(DT_INST_GPIO_LABEL(0, mdm_dtr_gpios),
-		  DT_INST_GPIO_PIN(0, mdm_dtr_gpios),
-		  DT_INST_GPIO_FLAGS(0, mdm_dtr_gpios) | GPIO_OUTPUT_LOW),
-#endif
 /*
-#if DT_INST_NODE_HAS_PROP(0, mdm_wdisable_gpios)
-	// MDM_WDISABLE 
-	MODEM_PIN(DT_INST_GPIO_LABEL(0, mdm_wdisable_gpios),
-		  DT_INST_GPIO_PIN(0, mdm_wdisable_gpios),
-		  DT_INST_GPIO_FLAGS(0, mdm_wdisable_gpios) | GPIO_OUTPUT_LOW),
-#endif
-*/
+ * Pin definitions
+ */
+static struct modem_pin modem_pins[] = { MODEM_PIN(
+	DT_INST_GPIO_LABEL(0, mdm_power_gpios), DT_INST_GPIO_PIN(0, mdm_power_gpios),
+	DT_INST_GPIO_FLAGS(0, mdm_power_gpios) | GPIO_OUTPUT_LOW) };
+
+/*
+ * Socket read callback data.
+ */
+struct socket_read_data {
+	char *recv_buf;
+	size_t recv_buf_len;
+	struct sockaddr *recv_addr;
+	uint16_t recv_read_len;
 };
 
-#endif /* QUECTEL_BG9X_H */
+#endif /* SIMCOM_SIM7020E_H */
