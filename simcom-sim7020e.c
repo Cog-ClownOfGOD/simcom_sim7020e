@@ -1210,8 +1210,9 @@ static int modem_pdp_activate(void)
 		LOG_ERR("Could not activate PDP context.");
 		goto error;
 	}
-	*/
-	ret = k_sem_take(&mdata.sem_response, MDM_PDP_TIMEOUT);
+	*/ 
+	ret = k_sem_take(&mdata.sem_response, K_SECONDS(1));
+	// ret = k_sem_take(&mdata.sem_response, MDM_PDP_TIMEOUT);
 	/*
 	if (ret < 0 || mdata.pdp_active == false) {
 		LOG_ERR("Failed to activate PDP context.");
