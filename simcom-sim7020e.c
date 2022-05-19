@@ -1212,12 +1212,13 @@ static int modem_pdp_activate(void)
 	}
 	*/
 	ret = k_sem_take(&mdata.sem_response, MDM_PDP_TIMEOUT);
+	/*
 	if (ret < 0 || mdata.pdp_active == false) {
 		LOG_ERR("Failed to activate PDP context.");
 		ret = -1;
 		goto error;
 	}
-
+	*/
 	LOG_INF("Network active.");
 
 error:
