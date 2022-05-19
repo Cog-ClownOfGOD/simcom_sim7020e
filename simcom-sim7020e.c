@@ -1157,8 +1157,14 @@ static int modem_pdp_activate(void)
 		LOG_WRN("Network attach failed!!");
 		return -1;
 	}
-
+	/*
 	if (!mdata.cpin_ready || mdata.mdm_cgatt != 1) {
+		LOG_ERR("Fatal: Modem is not attached to GPRS network!!");
+		return -1;
+	}
+	*/
+
+	if (mdata.mdm_cgatt != 1) {
 		LOG_ERR("Fatal: Modem is not attached to GPRS network!!");
 		return -1;
 	}
