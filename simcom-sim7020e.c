@@ -1192,8 +1192,8 @@ static int modem_pdp_activate(void)
 		ret = -1;
 		goto error;
 	}
-
-	/* Set dual stack mode (IPv4/IPv6) */
+	/*
+	// Set dual stack mode (IPv4/IPv6) 
 	ret = modem_cmd_send(&mctx.iface, &mctx.cmd_handler, NULL, 0, "AT+CNCFG=0,0",
 				&mdata.sem_response, MDM_CMD_TIMEOUT);
 	if (ret < 0) {
@@ -1201,16 +1201,16 @@ static int modem_pdp_activate(void)
 		goto error;
 	}
 
-	/*
-	 * Now activate the pdp context and wait for confirmation.
-	 */
+	
+	 // Now activate the pdp context and wait for confirmation.
+	 
 	ret = modem_cmd_send(&mctx.iface, &mctx.cmd_handler, NULL, 0, "AT+CNACT=0,1",
 			     &mdata.sem_response, MDM_CMD_TIMEOUT);
 	if (ret < 0) {
 		LOG_ERR("Could not activate PDP context.");
 		goto error;
 	}
-
+	*/
 	ret = k_sem_take(&mdata.sem_response, MDM_PDP_TIMEOUT);
 	if (ret < 0 || mdata.pdp_active == false) {
 		LOG_ERR("Failed to activate PDP context.");
