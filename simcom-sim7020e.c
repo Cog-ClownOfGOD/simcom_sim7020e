@@ -1264,13 +1264,17 @@ static const struct setup_cmd setup_cmds[] = {
  * Commands to be sent at setup. edit for sim7020e
  */
 static const struct setup_cmd setup_cmds[] = {
+	SETUP_CMD("AT+CGMI", "", on_cmd_cgmi, 0U, ""),
+	SETUP_CMD("AT+CGMM", "", on_cmd_cgmm, 0U, ""),
+	SETUP_CMD("AT+CGMR", "", on_cmd_cgmr, 0U, ""),
+	SETUP_CMD("AT+CGSN", "", on_cmd_cgsn, 0U, ""),
 	SETUP_CMD_NOHANDLE("AT+CMEE=1"),
 	SETUP_CMD_NOHANDLE("AT*MCGDEFCONT=\"IP\",\"DEVKIT.NB\""),
 	SETUP_CMD_NOHANDLE("AT+CLTS=1"),
 #if defined(CONFIG_MODEM_SIM_NUMBERS)
 	SETUP_CMD("AT+CIMI", "", on_cmd_cimi, 0U, ""),
 	SETUP_CMD("AT+CCID", "", on_cmd_ccid, 0U, ""),
-#endif // defined(CONFIG_MODEM_SIM_NUMBERS) 
+#endif // defined(CONFIG_MODEM_SIM_NUMBERS)
 };
 
 /**
