@@ -995,34 +995,36 @@ MODEM_CMD_DEFINE(on_cmd_cgsn)
 }
 
 #if defined(CONFIG_MODEM_SIM_NUMBERS)
-/*
- * Read international mobile subscriber identity.
- */
+
+//  Read international mobile subscriber identity.
+ 
 MODEM_CMD_DEFINE(on_cmd_cimi)
 {
 	size_t out_len =
 		net_buf_linearize(mdata.mdm_imsi, sizeof(mdata.mdm_imsi) - 1, data->rx_buf, 0, len);
 	mdata.mdm_imsi[out_len] = '\0';
 
-	/* Log the received information. */
+	// Log the received information. 
 	LOG_INF("IMSI: %s", log_strdup(mdata.mdm_imsi));
 	return 0;
 }
 
-/*
- * Read iccid.
- */
+
+//  Read iccid.
+ 
 MODEM_CMD_DEFINE(on_cmd_ccid)
 {
 	size_t out_len = net_buf_linearize(mdata.mdm_iccid, sizeof(mdata.mdm_iccid) - 1,
 					   data->rx_buf, 0, len);
 	mdata.mdm_iccid[out_len] = '\0';
 
-	/* Log the received information. */
+	// Log the received information.
 	LOG_INF("ICCID: %s", log_strdup(mdata.mdm_iccid));
 	return 0;
 }
-#endif /* defined(CONFIG_MODEM_SIM_NUMBERS) */
+#endif // defined(CONFIG_MODEM_SIM_NUMBERS) 
+
+
 
 /*
  * Parses the non urc C(E)REG and updates registration status.
@@ -1229,8 +1231,8 @@ static void modem_pwrkey(void)
 }
 
 /*
- * Commands to be sent at setup.
- */
+ * Commands to be sent at setup. by defualt
+ 
 static const struct setup_cmd setup_cmds[] = {
 	SETUP_CMD_NOHANDLE("ATH"),
 	SETUP_CMD("AT+CGMI", "", on_cmd_cgmi, 0U, ""),
@@ -1240,21 +1242,35 @@ static const struct setup_cmd setup_cmds[] = {
 #if defined(CONFIG_MODEM_SIM_NUMBERS)
 	SETUP_CMD("AT+CIMI", "", on_cmd_cimi, 0U, ""),
 	SETUP_CMD("AT+CCID", "", on_cmd_ccid, 0U, ""),
-#endif /* defined(CONFIG_MODEM_SIM_NUMBERS) */
+#endif // defined(CONFIG_MODEM_SIM_NUMBERS) 
 #if defined(CONFIG_MODEM_SIMCOM_SIM7020E_RAT_NB1)
 	SETUP_CMD_NOHANDLE("AT+CNMP=38"),
 	SETUP_CMD_NOHANDLE("AT+CMNB=2"),
 	SETUP_CMD_NOHANDLE("AT+CBANDCFG=\"NB-IOT\"," MDM_LTE_BANDS),
-#endif /* defined(CONFIG_MODEM_SIMCOM_SIM7020E_RAT_NB1) */
+#endif // defined(CONFIG_MODEM_SIMCOM_SIM7020E_RAT_NB1) 
 #if defined(CONFIG_MODEM_SIMCOM_SIM7020E_RAT_M1)
 	SETUP_CMD_NOHANDLE("AT+CNMP=38"),
 	SETUP_CMD_NOHANDLE("AT+CMNB=1"),
 	SETUP_CMD_NOHANDLE("AT+CBANDCFG=\"CAT-M\"," MDM_LTE_BANDS),
-#endif /* defined(CONFIG_MODEM_SIMCOM_SIM7020E_RAT_M1) */
+#endif // defined(CONFIG_MODEM_SIMCOM_SIM7020E_RAT_M1) 
 #if defined(CONFIG_MODEM_SIMCOM_SIM7020E_RAT_GSM)
 	SETUP_CMD_NOHANDLE("AT+CNMP=13"),
-#endif /* defined(CONFIG_MODEM_SIMCOM_SIM7020E_RAT_GSM) */
+#endif // defined(CONFIG_MODEM_SIMCOM_SIM7020E_RAT_GSM) 
 	SETUP_CMD("AT+CPIN?", "+CPIN: ", on_cmd_cpin, 1U, ""),
+};
+*/
+
+/*
+ * Commands to be sent at setup. edit for sim7020e
+ */
+static const struct setup_cmd setup_cmds[] = {
+	SETUP_CMD_NOHANDLE("AT+CMEE=1"),
+	SETUP_CMD_NOHANDLE("AT*MCGDEFCONT=\"IP\",\"DEVKIT.NB\""),
+	SETUP_CMD_NOHANDLE("AT+CLTS=1"),
+#if defined(CONFIG_MODEM_SIM_NUMBERS)
+	SETUP_CMD("AT+CIMI", "", on_cmd_cimi, 0U, ""),
+	SETUP_CMD("AT+CCID", "", on_cmd_ccid, 0U, ""),
+#endif // defined(CONFIG_MODEM_SIM_NUMBERS) 
 };
 
 /**
