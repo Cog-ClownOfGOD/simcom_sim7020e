@@ -1050,6 +1050,15 @@ MODEM_CMD_DEFINE(on_cmd_cgatt)
 	return 0;
 }
 
+//EDIT By Guang
+
+MODEM_CMD_DEFINE(on_cmd_csoc)
+{
+	int socket_id = atoi(argv[0]);
+	LOG_INF("+CSOC: %d", socket_id);
+	return 0;
+}
+
 /*
  * Handler for RSSI query.
  *
@@ -1220,6 +1229,14 @@ static int modem_pdp_activate(void)
 		goto error;
 	}
 	*/
+
+	// Create socket UDP/TCP EDIT By Guang //
+	struct modem_cmd cmds[] = { MODEM_CMD("+CSOC: ", on_cmd_csoc, 1U, "") };
+
+	ret = modem_cmd_send(&mctx.iface, &mctx.cmd_handler, cmds,
+				     ARRAY_SIZE(cmds), "AT+CSOC=1,2,1", &mdata.sem_response,
+				     MDM_CMD_TIMEOUT);
+
 	LOG_INF("Network active.");
 
 error:
@@ -1271,6 +1288,7 @@ static const struct setup_cmd setup_cmds[] = {
 /*
  * Commands to be sent at setup. edit for sim7020e
  */
+// Sequencial as follow Megallen AIS Module EDIT By GUANG //
 static const struct setup_cmd setup_cmds[] = {
 	SETUP_CMD("AT+CGMI", "", on_cmd_cgmi, 0U, ""),
 	SETUP_CMD("AT+CGMM", "", on_cmd_cgmm, 0U, ""),
