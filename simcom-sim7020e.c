@@ -1230,17 +1230,22 @@ static int modem_pdp_activate(void)
 	}
 	*/
 
-	// Create socket UDP/TCP EDIT By Guang //
+	LOG_INF("Network active.");
+
+error:
+	return ret;
+}
+
+// Create socket UDP/TCP EDIT By Guang //
+static void create_socket(void)
+{
+	int ret = 0;
+	
 	struct modem_cmd cmds[] = { MODEM_CMD("+CSOC: ", on_cmd_csoc, 1U, "") };
 
 	ret = modem_cmd_send(&mctx.iface, &mctx.cmd_handler, cmds,
 				     ARRAY_SIZE(cmds), "AT+CSOC=1,2,1", &mdata.sem_response,
 				     MDM_CMD_TIMEOUT);
-
-	LOG_INF("Network active.");
-
-error:
-	return ret;
 }
 
 /*
@@ -2257,6 +2262,8 @@ static int modem_setup(void)
 	if (ret < 0) {
 		goto error;
 	}
+
+	create_socket();
 
 	k_work_reschedule_for_queue(&modem_workq, &mdata.rssi_query_work,
 				    K_SECONDS(RSSI_TIMEOUT_SECS));
