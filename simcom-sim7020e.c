@@ -1054,7 +1054,7 @@ MODEM_CMD_DEFINE(on_cmd_cgatt)
 
 MODEM_CMD_DEFINE(on_cmd_csoc)
 {
-	int socket_id = atoi(argv[0]);
+	int socket_id = atoi(argv[1]);
 	LOG_INF("+CSOC: %d", socket_id);
 	return 0;
 }
@@ -1219,9 +1219,23 @@ static int modem_pdp_activate(void)
 		LOG_ERR("Could not activate PDP context.");
 		goto error;
 	}
-	*/ 
-	ret = k_sem_take(&mdata.sem_response, K_SECONDS(1));
-	// ret = k_sem_take(&mdata.sem_response, MDM_PDP_TIMEOUT);
+	*/
+	// Create socket UDP/TCP EDIT By Guang //
+	/*struct modem_cmd csoc_cmd[] = { MODEM_CMD("+CSOC: ", on_cmd_csoc, 0U, "") };
+	
+	ret = modem_cmd_send(&mctx.iface, &mctx.cmd_handler, csoc_cmd,
+				     	ARRAY_SIZE(csoc_cmd), "AT+CSOC=1,2,1", &mdata.sem_response,
+				     	MDM_CMD_TIMEOUT); 
+	*/
+	ret = modem_cmd_send(&mctx.iface, &mctx.cmd_handler, NULL, 0, "AT+CSOC=1,2,1",
+				&mdata.sem_response, MDM_CMD_TIMEOUT);
+	if (ret < 0) {
+		LOG_ERR("Can not create socket UDP/TCP");
+		goto error;
+	}
+	
+	// ret = k_sem_take(&mdata.sem_response, K_SECONDS(1));
+	ret = k_sem_take(&mdata.sem_response, MDM_PDP_TIMEOUT);
 	/*
 	if (ret < 0 || mdata.pdp_active == false) {
 		LOG_ERR("Failed to activate PDP context.");
@@ -1236,17 +1250,6 @@ error:
 	return ret;
 }
 
-// Create socket UDP/TCP EDIT By Guang //
-static void create_socket(void)
-{
-	int ret = 0;
-	
-	struct modem_cmd cmds[] = { MODEM_CMD("+CSOC: ", on_cmd_csoc, 1U, "") };
-
-	ret = modem_cmd_send(&mctx.iface, &mctx.cmd_handler, cmds,
-				     ARRAY_SIZE(cmds), "AT+CSOC=1,2,1", &mdata.sem_response,
-				     MDM_CMD_TIMEOUT);
-}
 
 /*
  * Toggles the modems power pin.
@@ -1576,10 +1579,12 @@ int mdm_sim7020e_query_gnss(struct sim7020e_gnss_data *data)
 	int ret;
 	struct modem_cmd cmds[] = { MODEM_CMD("+CGNSINF: ", on_cmd_cgnsinf, 0U, NULL) };
 
+	/*
 	if (get_state() != SIM7020E_STATE_GNSS) {
 		LOG_ERR("GNSS functionality is not enabled!!");
 		return -1;
 	}
+	*/
 
 	ret = modem_cmd_send(&mctx.iface, &mctx.cmd_handler, cmds, ARRAY_SIZE(cmds), "AT+CGNSINF",
 			     &mdata.sem_response, K_SECONDS(2));
@@ -1619,7 +1624,7 @@ int mdm_sim7020e_start_gnss(void)
 		return -1;
 	}
 
-	change_state(SIM7020E_STATE_GNSS);
+	// change_state(SIM7020E_STATE_GNSS);
 	return 0;
 }
 
@@ -2262,8 +2267,6 @@ static int modem_setup(void)
 	if (ret < 0) {
 		goto error;
 	}
-
-	create_socket();
 
 	k_work_reschedule_for_queue(&modem_workq, &mdata.rssi_query_work,
 				    K_SECONDS(RSSI_TIMEOUT_SECS));
